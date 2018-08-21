@@ -9,7 +9,6 @@ import (
 	"github.com/robfig/cron"
 	"errors"
 	"fmt"
-	"os"
 )
 
 var lcron = cron.New()
@@ -134,30 +133,14 @@ func wrapperConfs() ([]*Conf,error) {
 
 func main() {
 
-	if validateConfFlag{
-		confs,err := wrapperConfs()
-		if err == nil{
-			for _,c := range confs{
-				bt,err := yaml.Marshal(c)
-				if err != nil{
-					vlog.Error("序列化 文件失败",err)
-				}
-				if !validateConf(c){
-					fmt.Println("validate failed\n",string(bt))
-					os.Exit(1)
-				}
-			}
-		}else{
-			fmt.Println("validate failed",err)
-			os.Exit(2)
-		}
-		fmt.Println("sccessful")
-		os.Exit(0)
-	}
 	confs,err := wrapperConfs()
-	if err == nil{
-		restartCron(confs)
+	if err != nil || len(confs) ==0 {
+		fmt.Println("config load failed")
+		return
+	}else if validateConfFlag{
+		return
 	}
+	restartCron(confs)
 
 	select {
 
