@@ -10,13 +10,28 @@ import (
 	"path/filepath"
 	"os/user"
 	"github.com/robfig/cron"
+	"errors"
 )
 
-var confs []*Conf
+const (
+	T_D = "dir"
+	T_F = "file"
+)
 
-var defaultConfDirs = []string{
+var lcron = cron.New()
+
+var confMode ConfModel
+
+var defaultConfDirs = extDefaultConfDir([]string{
 	"/etc/logpack",
+})
+
+type ConfModel struct {
+	typ string
+	path string
 }
+
+
 
 func init() {
 	var confdir string
@@ -27,73 +42,116 @@ func init() {
 	flag.StringVar(&confdir, "d", "", "指定配置文件路径，默认会地柜加载指定路径所有文件")
 	flag.StringVar(&conffile, "f", "", "指定唯一的配置文件。 如果指定 -f 那么-d将会忽略")
 	flag.IntVar(&compressRate,"rate", 9, "自定压缩比率")
-
 	if "" == conffile { //加载文件夹
 		if "" != confdir {
-			loadDir(confdir)
+			confMode = ConfModel{
+				typ : T_D,
+				path: confdir,
+			}
+			return
 		} else {
 			for _, d := range defaultConfDirs {
-				loadDir(d)
-				if len(confs) >0 {
-					vlog.Info("use confi dir:", d)
-					break
-				}
-				// 获取用户家目录下默认目录的配置文件
-				user,err := user.Current()
-				if(err != nil){
-					vlog.Error("获取用户信息失败",err)
-				}
-				hc := filepath.Join(user.HomeDir,d)
-				loadDir(hc)
-				if len(confs) >0 {
-					vlog.Info("use confi dir:", hc)
-					break
+
+				fis,err := ioutil.ReadDir(d)
+				if err != nil{
+					vlog.Info("获取文件夹失败",d," 忽略该文件夹")
+					continue
+				}else if len(fis) > 0{
+					vlog.Info("加载配置文件夹",d)
+					confMode = ConfModel{
+						typ : T_D,
+						path : d,
+					}
+					return
+				}else{
+					vlog.Info("文件夹为空",d, "忽略该文件夹")
 				}
 			}
 		}
 	} else { //加载指定的文件
-		loadConfile(conffile)
+		confMode = ConfModel{
+			typ:T_F,
+			path:conffile,
+		}
+		return
 	}
 
 }
 
+//扩展默认加载配置文件的目录支持家目录加载
+func extDefaultConfDir(defaultConfDirs []string) []string{
+	user,err := user.Current()
+	if err != nil{
+		vlog.Error("获取用户家目录失败, 将忽略默认家目录配置文件加载")
+		return defaultConfDirs
+	}
+	extConfdirs := defaultConfDirs
+	for _,d := range defaultConfDirs{
+		extConfdirs = append(extConfdirs,filepath.Join(user.HomeDir,d))
+	}
+	return extConfdirs
+}
+
+
 // 加载目录， 递归加载
-func loadDir(d string) {
+func loadDir(d string) ([]*Conf, error) {
+	confs := make([]*Conf,0)
 	f, err := os.Stat(d)
 	if (! os.IsNotExist(err)) && f.IsDir() {
 		files, err := ioutil.ReadDir(d)
 		if err != nil {
 			vlog.Info("dir load fail the path is : ", f.Name() , err)
-			return
+			return nil,err
 		}
 		if len(files) == 0 {
 			vlog.Debug("the path not config file:",d)
+			return nil,errors.New("the path is empty: " + d)
 		}
 		for _, f := range files {
 			if f.IsDir() {
 				p := filepath.Join(d,f.Name())
-				loadDir(p)
+				cs,err := loadDir(p);
+				if err == nil{
+					confs = append(confs,cs...)
+					continue
+				}else{
+					vlog.Error("dir load fail",err)
+					continue
+				}
 			}else{
-				loadConfile(filepath.Join(d,f.Name()))
+				c,err := loadConfile(filepath.Join(d,f.Name()))
+				if err != nil{
+					vlog.Error("config file load failed",err)
+					continue
+				}else{
+					confs = append(confs,c)
+					continue
+				}
 			}
 		}
 	} else {
 		vlog.Debug("path: " + d + " not exist")
+		return nil,err
 	}
+	return confs,err
 }
 
 // 加载配置文件，到 confs
-func loadConfile(fl string) {
+func loadConfile(fl string) (*Conf,error ){
 	conf := &Conf{}
 	bt,err := ioutil.ReadFile(fl)
 	if err != nil {
 		vlog.Error("the path " + fl + " load fail")
+		return nil,err
 	} else {
-		if err := yaml.Unmarshal(bt, conf); err != nil {
+		if err := yaml.Unmarshal(bt, &conf); err != nil {
 			vlog.Error(" path : " + fl + "解析失败 ", err)
+			return nil,err
 		}else{
 			if validateConf(conf) {
-				confs = append(confs, conf)
+				return conf,nil
+			}else{
+				return nil,errors.New("文件检验失败: "+fl)
 			}
 		}
 
@@ -145,20 +203,22 @@ func empty(v interface{}) bool  {
 	return false
 }
 
-func main() {
+func restartCron(confs []*Conf)  {
+
 	if len(confs) ==0 {
-		vlog.Error("not find config file, default load dir is ",defaultConfDirs, "and homedir: ",defaultConfDirs)
-		os.Exit(2)
+		vlog.Error("confs is empty ")
+		return
 	}
-	bt, err := json.Marshal(confs)
+	bt,err := yaml.Marshal(confs)
 	if err != nil {
-		panic(err)
+		vlog.Error("conf 解析失败")
+		return
+	}else{
+		vlog.Debug("configs is : \n",string(bt))
 	}
-	vlog.Debug("configs is : ",string(bt))
 
+	lcron.Stop()
 
-
-	cron := cron.New()
 	for _,c := range confs{
 		if c.Logrotates != nil {
 			for _,l := range c.Logrotates{
@@ -167,7 +227,7 @@ func main() {
 					vlog.Debug("json 解析失败",l,err)
 				}
 				vlog.Info("add logratate to cron ", string(bt))
-				cron.AddJob(l.Schedule,l)
+				lcron.AddJob(l.Schedule,l)
 
 			}
 		}
@@ -178,11 +238,47 @@ func main() {
 					vlog.Debug("json 解析失败",a,err)
 				}
 				vlog.Info("add archive to cron",string(bt))
-				cron.AddJob(a.Schedule,a)
+				lcron.AddJob(a.Schedule,a)
 			}
 		}
 	}
-	cron.Run()
+	lcron.Start()
 
+}
+
+func start()  {
+	confs := make([]*Conf,0)
+	if confMode.typ == T_F{
+		conf,err := loadConfile(confMode.path)
+		if err != nil{
+			vlog.Error("配置文件加载失败",confMode.path,err)
+			return
+		}else{
+			confs = append(confs,conf)
+		}
+	}else if confMode.typ == T_D{
+		cs,err := loadDir(confMode.path)
+		if err != nil{
+			vlog.Error("配置文件加载失败",confMode.path,err)
+			return
+		}else{
+			confs = append(confs,cs...)
+		}
+	}
+	if len(confs) >0{
+		restartCron(confs)
+	}else{
+		vlog.Error("cron 启动失败")
+	}
+}
+
+
+func main() {
+
+	start()
+
+	select {
+
+	}
 
 }
