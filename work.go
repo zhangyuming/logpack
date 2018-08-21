@@ -31,8 +31,6 @@ const (
 	archiveDir = "logpack"
 )
 
-type Lock string
-
 type Conf struct {
 	Name       string      `yaml:"name"`
 	Logrotates []*Logrotate `yaml:"logrotate"`
@@ -41,7 +39,7 @@ type Conf struct {
 
 // 公共的config 实体
 type Logrotate struct {
-	*sync.Mutex
+	sync.Mutex
 	Name     string   `yaml:"name"`
 	Schedule string   `yaml:"schedule"`
 	Rotate   int      `yaml:"rotate"`
@@ -51,74 +49,13 @@ type Logrotate struct {
 }
 
 type Archive struct {
-	*sync.Mutex
+	sync.Mutex
 	Name     string   `yaml:"name"`
 	Schedule string   `yaml:"schedule"`
 	Rotate   int      `yaml:"rotate"`
 	Previous   int      `yaml:"previous"`
 	Dirs     []string `yaml:"dirs"`
 }
-
-
-
-func (c Logrotate)Lock()  {
-	bt,err := json.Marshal(c)
-	if err != nil{
-		vlog.Error("格式化失败")
-		down <- 1 //直接夯住
-	}
-	if ch,ok := lockMap[string(bt)]; ok {
-		ch <- 1
-	}else{
-		ch := make(chan int, 1)
-		lockMap[string(bt)] = ch
-		ch <- 1
-	}
-}
-
-func (c Logrotate)Unlock()  {
-	bt,err := json.Marshal(c)
-	if err != nil{
-		vlog.Error("格式化失败")
-		down <- 1 //直接夯住
-	}
-	if ch,ok := lockMap[string(bt)]; ok{
-		<- ch
-	}else{
-		vlog.Error("在锁列表中没有找到对应的key",string(bt))
-	}
-}
-
-
-func (c Archive)Lock()  {
-	bt,err := json.Marshal(c)
-	if err != nil{
-		vlog.Error("格式化失败")
-		down <- 1 //直接夯住
-	}
-	if ch,ok := lockMap[string(bt)]; ok {
-		ch <- 1
-	}else{
-		ch := make(chan int, 1)
-		lockMap[string(bt)] = ch
-		ch <- 1
-	}
-}
-
-func (c Archive)Unlock()  {
-	bt,err := json.Marshal(c)
-	if err != nil{
-		vlog.Error("格式化失败")
-		down <- 1 //直接夯住
-	}
-	if ch,ok := lockMap[string(bt)]; ok{
-		<- ch
-	}else{
-		vlog.Error("在锁列表中没有找到对应的key",string(bt))
-	}
-}
-
-
 
 func (c Logrotate)String()string  {
 	bt,err := json.Marshal(c)
@@ -378,10 +315,11 @@ func isUsedFile(file string) bool{
 	return false
 }
 
-func (c Logrotate) Run() {
+func (c *Logrotate) Run() {
 	c.Lock()
 	bt,_:= json.Marshal(c)
 	vlog.Debug("获得对象锁",string(bt))
+
 	defer func() {
 		c.Unlock()
 		vlog.Debug("释放对象锁",string(bt))
@@ -469,7 +407,7 @@ func (c Logrotate) Run() {
 
 }
 
-func (c Archive) Run() {
+func (c *Archive) Run() {
 	c.Lock()
 	bt,_:= json.Marshal(c)
 	vlog.Debug("获得对象锁",string(bt))
