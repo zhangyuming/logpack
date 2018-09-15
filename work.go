@@ -1,7 +1,7 @@
 package main
 
 import (
-	"utilens/vlog"
+	"logpack/vlog"
 	"encoding/json"
 	"time"
 	"fmt"

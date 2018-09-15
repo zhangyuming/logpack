@@ -18,14 +18,17 @@ const(
 )
 
 
-func SetLogOut(logdir string){
-
-	logf,err := os.OpenFile(filepath.Join(logdir,"logs","logpack.log"),os.O_CREATE|os.O_WRONLY, 0666)
+func SetLogOut(logdir string) (string,error) {
+	os.MkdirAll(filepath.Join(logdir,"logs"),0755)
+	logfile := filepath.Join(logdir,"logs","logpack.log")
+	logf,err := os.OpenFile(logfile,os.O_CREATE|os.O_WRONLY, 0666)
+	log.Print("logging to file : ",logfile)
 	if err != nil{
 		Error("create log file error ", err)
-		return
+		return "", err
 	}
 	log.SetOutput(logf)
+	return logfile, nil
 
 }
 

@@ -5,7 +5,7 @@ import (
 	"flag"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	"utilens/vlog"
+	"logpack/vlog"
 	"github.com/robfig/cron"
 	"errors"
 	"fmt"
@@ -143,10 +143,23 @@ func main() {
 		log.Fatal("get current dir faile")
 		return
 	}
-	vlog.SetLogOut(p)
+	logfile,err := vlog.SetLogOut(p)
 
 
 	confs,err := wrapperConfs()
+
+	defaultConf := Conf{}
+	defaultConf.Name = "logpack log"
+	logrotats := []*Logrotate{}
+	logrotats = append(logrotats,&Logrotate{
+		Name: "logpack self log",
+		Rotate: 5,
+		Compress: true,
+		Files: []string{logfile},
+		Schedule: "* * */10 * *",
+	})
+	defaultConf.Logrotates = logrotats
+	confs = append(confs,&defaultConf)
 	if err != nil || len(confs) ==0 {
 		fmt.Println("config load failed")
 		return
