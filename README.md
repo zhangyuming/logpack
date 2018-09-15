@@ -3,13 +3,13 @@ logpack 为服务器日志归档设计的， 服务器上经常有大量的日�
 
 ### 同类软件
 - logrotate
-> logratate 是日志轮替非常好的一款软件，支持的个性话配置比较强大，但是有个弊端是做日志轮替，轮替完成之后并不能统一归档， 
+> logrotate 是日志轮替非常好的一款软件，支持的个性话配置比较强大，但是有个弊端是做日志轮替，轮替完成之后并不能统一归档， 
 > 只能自己写脚本配置到配置文件中， logpack 除了可以做日志轮替之外还支持日志归档。
 
 
 ### 典型使用场景
 - tomcat 日志归档
-> 做过运维的应该比较了解 tomcat logs目录有大量的日志文件， 如果用logratate 只能轮替 catalina.out， 但是logs文件夹日志文件数量会越来越大.
+> 做过运维的应该比较了解 tomcat logs目录有大量的日志文件， 如果用logrotate 只能轮替 catalina.out， 但是logs文件夹日志文件数量会越来越大.
 > 通过logpack 不仅可以轮替catalina.out文件同时还会整理杂乱的日志文件
 
 
@@ -19,6 +19,7 @@ logpack 为服务器日志归档设计的， 服务器上经常有大量的日�
 > - 编写配置文件[/etc/logpack|~/etc/logpack] `配置文件必须为 yaml|yml  配置文件说明见下方` 
 > - 启动 `nohup ./logpack-[version] 1>nohup.out 2>&1 &`
 > - 默认日志文件为启动目录的 logs/logpack.log
+>> 配置文件默认加载目录为 `/etc/logpack` `~/etc/logpack`
 
 
 ## 参数说明 
