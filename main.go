@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"os"
 	"log"
+	"os/exec"
 )
 
 var lcron = cron.New()
@@ -166,10 +167,25 @@ func main() {
 	}else if validateConfFlag{
 		return
 	}
+
+	if ! prepare() {
+		return
+	}
+
 	restartCron(confs)
 
 	select {
 
 	}
 
+}
+
+func prepare() bool  {
+
+	_,err := exec.LookPath("lsof")
+	if err != nil{
+		vlog.Error("the process need lsof commad , no found lsof command", err)
+		return false
+	}
+	return true
 }

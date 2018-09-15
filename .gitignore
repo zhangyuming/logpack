@@ -1,4 +1,7 @@
 .idea
+go_build*
 test.go
 *.exe
 logpack
+logs
+nohup.out
