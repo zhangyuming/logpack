@@ -23,6 +23,7 @@ var confdirFlag string
 var conffileFlag string
 var validateConfFlag bool
 var CurrentDIR string
+var IsDebug bool
 func init() {
 
 	//加载配置文件， 默认加载路径 /etc/logpack、 当前用户工作空间 ~/etc/logpack 如果通过 -f 指定那么会只加载指定的配置文件，以上配置文件目录会被忽略
@@ -30,7 +31,11 @@ func init() {
 	flag.StringVar(&conffileFlag, "f", "", "指定唯一的配置文件。 如果指定 -f 那么-d将会忽略")
 	flag.IntVar(&compressRate,"rate", 9, "自定压缩比率")
 	flag.BoolVar(&validateConfFlag,"t",false,"校验配置文件")
+	flag.BoolVar(&IsDebug,"vv",false,"log level detail log")
 	flag.Parse()
+	if IsDebug{
+		vlog.Level = "DEBUG"
+	}
 	if "" == conffileFlag { //加载文件夹
 		if "" != confdirFlag {
 			confMode = ConfModel{

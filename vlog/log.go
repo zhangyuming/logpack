@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-var Level string = "DEBUG"
+var Level string = "INFO"
 
 var writer io.Writer
 
