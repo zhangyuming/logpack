@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"os"
 	"errors"
+	"strings"
 )
 
 const (
@@ -88,23 +89,29 @@ func loadDir(d string) ([]*Conf, error) {
 // 加载配置文件，到 confs
 func loadConfile(fl string) (*Conf,error ){
 	conf := &Conf{}
-	bt,err := ioutil.ReadFile(fl)
-	if err != nil {
-		vlog.Error("the path " + fl + " load fail")
-		return nil,err
-	} else {
-		if err := yaml.Unmarshal(bt, &conf); err != nil {
-			vlog.Error(" path : " + fl + "解析失败 ", err)
+	if strings.HasSuffix(fl,"yaml") || strings.HasSuffix(fl,"yml"){
+		bt,err := ioutil.ReadFile(fl)
+		if err != nil {
+			vlog.Error("the path " + fl + " load fail")
 			return nil,err
-		}else{
-			if validateConf(conf) {
-				return conf,nil
+		} else {
+			if err := yaml.Unmarshal(bt, &conf); err != nil {
+				vlog.Error(" path : " + fl + "解析失败 ", err)
+				return nil,err
 			}else{
-				return nil,errors.New("文件检验失败: "+fl)
+				if validateConf(conf) {
+					return conf,nil
+				}else{
+					return nil,errors.New("文件检验失败: "+fl)
+				}
 			}
-		}
 
+		}
+	} else {
+		vlog.Debug("file ",fl,"not endwith yaml or yml , skip file ")
+		return nil,errors.New("file ext not yaml or yml: "+fl)
 	}
+
 }
 
 //校验配置文件，archive 必填项 schedule和dirs  logrotate必填项为schedule和files

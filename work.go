@@ -15,7 +15,8 @@ import (
 	"sort"
 	"sync"
 	"archive/tar"
-)
+	"os/exec"
+	)
 
 var compressRate int = 9
 var defaultRotateFileSize string = "1M"
@@ -85,7 +86,7 @@ func rotateFile(name string) (newName string,err error){
 		return
 	}
 	defer f.Close()
-	t,err := os.OpenFile(newName, os.O_CREATE,0666)
+	t,err := os.OpenFile(newName, os.O_CREATE|os.O_WRONLY,0666)
 	if err != nil{
 		vlog.Error("create file faild ", newName)
 		return
@@ -94,7 +95,7 @@ func rotateFile(name string) (newName string,err error){
 	_,err = io.Copy(t,f)
 	f.Close()
 	if err != nil{
-		vlog.Error("copy file failed: source ", name ,"  to: ", newName )
+		vlog.Error("copy file failed: source ", name ,"  to: ", newName ,err)
 		return
 	}
 	t.Sync()
@@ -156,7 +157,7 @@ func zipFile(name string) error{
 		return err
 	}
 	defer in.Close()
-	out,err := os.OpenFile(fmt.Sprint(name,".gz"),os.O_CREATE,0666)
+	out,err := os.OpenFile(fmt.Sprint(name,".gz"),os.O_CREATE|os.O_WRONLY,0666)
 	if err != nil {
 		vlog.Error("create file failed ", fmt.Sprint(name,".gz"),err)
 	}
@@ -250,7 +251,7 @@ func listUnUsedFiles(dir string, previous int) ( files []*string, err error){
 // 打包文件
 func tarFiles(files []*string, tarName string, deleteSource bool)(error){
 
-	f,err := os.OpenFile(tarName,os.O_CREATE,0666)
+	f,err := os.OpenFile(tarName,os.O_CREATE|os.O_WRONLY,0666)
 	if err != nil{
 		vlog.Error("创建压缩包文件失败",err)
 		return err
@@ -309,10 +310,32 @@ func tarFiles(files []*string, tarName string, deleteSource bool)(error){
 // 判断文件是在使用中
 func isUsedFile(file string) bool{
 
-	if strings.HasSuffix(file,"log.yaml") || strings.HasSuffix(file,"bb"){
+	lsof := exec.Command("lsof",file)
+	lsofout,_ := lsof.StdoutPipe()
+	lsof.Start()
+
+	wc := exec.Command("wc","-l")
+	wc.Stdin = lsofout
+	out,err:= wc.Output()
+	if err != nil{
+		vlog.Error("lsof file failed : ",file)
 		return true
 	}
-	return false
+	rslt,err := strconv.Atoi(strings.TrimSpace(string(out)))
+	if err != nil{
+		vlog.Error("lsof result convert to int exception, result is :", string(out))
+		return true
+	}
+	if rslt == 0{
+		vlog.Debug("file is unused: ",file)
+		return false
+	}else{
+		vlog.Debug("file is used ",file)
+		return true
+	}
+
+
+
 }
 
 func (c *Logrotate) Run() {
@@ -435,7 +458,7 @@ func (c *Archive) Run() {
 			_,err = os.Stat(logPackDir)
 			if err != nil{
 				vlog.Debug("创建logpack文件夹",logPackDir)
-				if err = os.Mkdir(filepath.Join(dir,defaultArchiveDir),0666); err != nil{
+				if err = os.Mkdir(filepath.Join(dir,defaultArchiveDir),0755); err != nil{
 					vlog.Error("创建logpack文件夹失败",err)
 					return
 				}

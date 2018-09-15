@@ -9,6 +9,9 @@ import (
 	"github.com/robfig/cron"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"os"
+	"log"
 )
 
 var lcron = cron.New()
@@ -18,10 +21,11 @@ var confMode ConfModel
 var confdirFlag string
 var conffileFlag string
 var validateConfFlag bool
+var CurrentDIR string
 func init() {
 
 	//加载配置文件， 默认加载路径 /etc/logpack、 当前用户工作空间 ~/etc/logpack 如果通过 -f 指定那么会只加载指定的配置文件，以上配置文件目录会被忽略
-	flag.StringVar(&confdirFlag, "d", "", "指定配置文件路径，默认会地柜加载指定路径所有文件")
+	flag.StringVar(&confdirFlag, "d", "", "指定配置文件路径，默认会加载指定路径所有文件")
 	flag.StringVar(&conffileFlag, "f", "", "指定唯一的配置文件。 如果指定 -f 那么-d将会忽略")
 	flag.IntVar(&compressRate,"rate", 9, "自定压缩比率")
 	flag.BoolVar(&validateConfFlag,"t",false,"校验配置文件")
@@ -132,6 +136,15 @@ func wrapperConfs() ([]*Conf,error) {
 
 
 func main() {
+
+
+	p,err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil{
+		log.Fatal("get current dir faile")
+		return
+	}
+	vlog.SetLogOut(p)
+
 
 	confs,err := wrapperConfs()
 	if err != nil || len(confs) ==0 {

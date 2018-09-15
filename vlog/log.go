@@ -1,8 +1,15 @@
 package vlog
 
-import "log"
+import (
+	"log"
+	"io"
+	"os"
+	"path/filepath"
+)
 
 var Level string = "DEBUG"
+
+var writer io.Writer
 
 const(
 	I = "INFO"
@@ -10,10 +17,23 @@ const(
 	E = "ERROR"
 )
 
+
+func SetLogOut(logdir string){
+
+	logf,err := os.OpenFile(filepath.Join(logdir,"logs","logpack.log"),os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil{
+		Error("create log file error ", err)
+		return
+	}
+	log.SetOutput(logf)
+
+}
+
+
 func Info(v ...interface{})  {
 
 	if Level == I || Level == D {
-		log.Print(I,v)
+		log.Println(I,v)
 	}
 }
 
