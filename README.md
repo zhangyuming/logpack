@@ -39,6 +39,9 @@ logpack 为服务器日志归档设计的， 服务器上经常有大量的日�
     	logpack 日志bebug日志级别
 ```
 
+## TODO
+- 动态reload
+
 ## 配置文件实例
 ```
 name: "logpack"
