@@ -22,6 +22,9 @@ logpack 为服务器日志归档设计的， 服务器上经常有大量的日�
 >> 配置文件默认加载目录为 `/etc/logpack` `~/etc/logpack`  
 >> eg： /etc/logpack/logpack.yaml   `logpack.yaml`内容参加配置文件示例
 
+## 使用限制
+> - 目前只支持linux服务器 
+> - 服务器上必须有`lsof`命令
 
 ## 参数说明 
 ```
