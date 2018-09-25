@@ -21,7 +21,7 @@ const(
 func SetLogOut(logdir string) (string,error) {
 	os.MkdirAll(filepath.Join(logdir,"logs"),0755)
 	logfile := filepath.Join(logdir,"logs","logpack.log")
-	logf,err := os.OpenFile(logfile,os.O_CREATE|os.O_WRONLY, 0666)
+	logf,err := os.OpenFile(logfile,os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	log.Print("logging to file : ",logfile)
 	if err != nil{
 		Error("create log file error ", err)

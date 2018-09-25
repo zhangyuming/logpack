@@ -308,8 +308,11 @@ func tarFiles(files []*string, tarName string, deleteSource bool)(error){
 
 
 // 判断文件是在使用中
+var lsofLock sync.Mutex = sync.Mutex{}
 func isUsedFile(file string) bool{
 
+	lsofLock.Lock()
+	defer lsofLock.Unlock()
 	lsof := exec.Command("lsof",file)
 	lsofout,_ := lsof.StdoutPipe()
 	lsof.Start()
@@ -317,6 +320,7 @@ func isUsedFile(file string) bool{
 	wc := exec.Command("wc","-l")
 	wc.Stdin = lsofout
 	out,err:= wc.Output()
+	lsof.Wait()
 	if err != nil{
 		vlog.Error("lsof file failed : ",file)
 		return true
