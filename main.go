@@ -162,7 +162,7 @@ func main() {
 		Rotate: 5,
 		Compress: true,
 		Files: []string{logfile},
-		Schedule: "* * */10 * *",
+		Schedule: "0 0 6 * *",
 	})
 	defaultConf.Logrotates = logrotats
 	confs = append(confs,&defaultConf)
