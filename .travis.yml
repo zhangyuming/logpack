@@ -12,5 +12,5 @@ deploy:
   api_key: $GITHUB_TOKEN
   file: logpack.tar.gz
   on:
-    tag: true
+    tags: true
 
