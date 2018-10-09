@@ -1,2 +1,6 @@
 language: go
+
+go:
+  - 1.10.x
+
 script: go get github.com/tidwall/gjson && go get github.com/tidwall/sjson
