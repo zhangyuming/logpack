@@ -393,7 +393,7 @@ func (c *Logrotate) Run() {
 					}
 				}
 			}else{
-				vlog.Debug("文件大小小于预设值或者小于默认值",defaultRotateFileSize,"无需轮替, 文件：",f," size:",finfo.Size())
+				vlog.Debug("文件大小小于预设值或者小于默认值",c.Size,"无需轮替, 文件：",f," size:",finfo.Size())
 			}
 		}(fname)
 	}
