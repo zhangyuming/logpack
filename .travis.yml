@@ -4,3 +4,13 @@ go:
   - 1.10.x
 
 script: go get github.com/tidwall/gjson && go get github.com/tidwall/sjson
+script: go build && tar -zcf logpack.tar.gz logpack
+
+deploy:
+  provider: releases
+  skip_cleanup: true
+  api_key: $GITHUB_TOKEN
+  file: logpack.tar.gz
+  on:
+    tag: true
+
