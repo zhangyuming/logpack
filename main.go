@@ -5,7 +5,7 @@ import (
 	"flag"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	"logpack/vlog"
+	"github.com/zhangyuming/logpack/vlog"
 	"github.com/robfig/cron"
 	"errors"
 	"fmt"

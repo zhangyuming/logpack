@@ -1,7 +1,7 @@
 package main
 
 import (
-	"logpack/vlog"
+	"github.com/zhangyuming/logpack/vlog"
 	"encoding/json"
 	"time"
 	"fmt"

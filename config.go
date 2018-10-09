@@ -2,7 +2,7 @@ package main
 
 import (
 	"gopkg.in/yaml.v2"
-	"logpack/vlog"
+	"github.com/zhangyuming/logpack/vlog"
 	"encoding/json"
 	"io/ioutil"
 	"os/user"
