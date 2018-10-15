@@ -195,15 +195,31 @@ func zipFile(name string) error{
 	default:
 		w,err = gzip.NewWriterLevel(out,gzip.BestCompression)
 	}
-	bt,err := ioutil.ReadAll(in)
-	if err != nil{
-		vlog.Error("读取文件失败",name, err)
-		return err
+
+
+	buf := make([]byte, 2048)
+
+	for{
+		n,err := in.Read(buf)
+		if err != nil{
+			vlog.Error("读取文件失败, filename: ", name,err)
+			break
+		}
+		if n == 0{
+			break
+		}
+		w.Write(buf[0:n])
 	}
-	if _,err = w.Write(bt); err != nil {
-		vlog.Error("压缩文件失败")
-		return err
-	}
+	vlog.Debug("文件压缩结束",name)
+	//bt,err := ioutil.ReadAll(in)
+	//if err != nil{
+	//	vlog.Error("读取文件失败",name, err)
+	//	return err
+	//}
+	//if _,err = w.Write(bt); err != nil {
+	//	vlog.Error("压缩文件失败")
+	//	return err
+	//}
 	w.Flush()
 	w.Close()
 	return nil
