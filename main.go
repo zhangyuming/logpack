@@ -26,6 +26,7 @@ var validateConfFlag bool
 var CurrentDIR string
 var IsDebug bool
 var daemon bool
+var logfrontend bool
 func init() {
 
 	//加载配置文件， 默认加载路径 /etc/logpack、 当前用户工作空间 ~/etc/logpack 如果通过 -f 指定那么会只加载指定的配置文件，以上配置文件目录会被忽略
@@ -35,7 +36,45 @@ func init() {
 	flag.BoolVar(&validateConfFlag,"t",false,"校验配置文件")
 	flag.BoolVar(&IsDebug,"vv",false,"日志级别")
 	flag.BoolVar(&daemon,"daemon",false,"后台启动")
+	flag.BoolVar(&logfrontend,"e",true,"日志前台显示")
 	flag.Parse()
+
+
+	//后台启动
+	if daemon{
+		args := os.Args[1:]
+		flage := false
+		i := 0
+		for ; i < len(args); i++ {
+			if args[i] == "-daemon" || args[i] == "-daemon=true" || args[i] == "--daemon" || args[i] == "--daemon=true" {
+				args[i] = "-daemon=false"
+				continue
+			}
+			if args[i] == "-e" || args[i] == "-e=true"{
+				args[i] = "-e=false"
+				flage = true
+				continue
+			}
+		}
+		if !flage{
+			args = append(args, "-e=false")
+		}
+
+
+		f,err := createLogfile()
+		if err != nil{
+			fmt.Print("create log file error", err)
+			os.Exit(1)
+		}
+		fmt.Println("[logfile is] ", f)
+		//fmt.Println(args)
+		cmd := exec.Command(os.Args[0], args...)
+		cmd.Start()
+		fmt.Println("[PID]", cmd.Process.Pid)
+		os.Exit(0)
+	}
+
+
 	if IsDebug{
 		vlog.Level = "DEBUG"
 	}
@@ -74,21 +113,6 @@ func init() {
 	}
 
 
-	//后台启动
-	if daemon{
-		args := os.Args[1:]
-		i := 0
-		for ; i < len(args); i++ {
-			if args[i] == "-daemon" || args[i] == "-daemon=true" {
-				args[i] = "-daemon=false"
-				break
-			}
-		}
-		cmd := exec.Command(os.Args[0], args...)
-		cmd.Start()
-		fmt.Println("[PID]", cmd.Process.Pid)
-		os.Exit(0)
-	}
 
 }
 
@@ -160,57 +184,79 @@ func wrapperConfs() ([]*Conf,error) {
 	return nil,errors.New("wrapper confs failed")
 }
 
+//dir of file exist
+func pathExists(path string) bool  {
+	_, err := os.Stat(path)
+	if err == nil{
+		return true
+	}
+	if os.IsNotExist(err){
+		return false
+	}
+	return false
+}
+
+// create log file
+func createLogfile()(logfile string, err error){
+	var logdir = "/var/log/logpack"
+
+	//创建日志文件
+	if(!pathExists(logdir)){
+		if err := os.Mkdir(logdir,0755); err != nil {
+			u,err := user.Current()
+			if err != nil{
+				log.Fatalln("get user failed")
+				return "",err
+			}
+			logdir = filepath.Join(u.HomeDir,"logpack")
+			if !pathExists(logdir){
+				if err = os.Mkdir(logdir,0755); err != nil{
+					log.Fatalln("create user home logpack dir fail")
+					return "",err
+				}
+			}
+
+		}
+	}
+
+	logfile = filepath.Join(logdir,"logpack.log")
+	_,err = os.Create(logfile)
+	if err != nil{
+		log.Fatalln("create file error", err)
+		return
+	}
+	return logfile,nil
+}
 
 func main() {
 
+	confs,err := wrapperConfs()
 
-	var logfile string
-	//创建日志文件
-	if err := os.Mkdir("/var/log/logpack",0755); err != nil{
-		u,err := user.Current()
-		if err != nil{
-			log.Fatalln("get user failed")
-			return
-		}
-		if err = os.Mkdir(filepath.Join(u.HomeDir,"logpack"),0755); err != nil{
-			log.Fatalln("create user home logpack dir fail")
-			return
-		}else{
-			logfile = filepath.Join(u.HomeDir,"logpack","logpack.log")
-			f,err := os.Create(logfile)
-			if err != nil{
-				log.Fatalln("create file error", err)
-				return
-			}
-			defer f.Close()
-			vlog.SetLogOut(logfile)
-		}
+	if logfrontend{
+		vlog.SetLogAppender(os.Stdout)
+
 	}else{
-		logfile = "/var/log/logpack/logpack.log"
-		f,err := os.Create(logfile)
+		logfile,err := createLogfile()
 		if err != nil{
-			log.Fatalln("create file error", err)
+			log.Print("create log file error ", err)
 			return
 		}
-		defer f.Close()
 		vlog.SetLogOut(logfile)
+		defaultConf := Conf{}
+		defaultConf.Name = "logpack log"
+		logrotats := []*Logrotate{}
+		logrotats = append(logrotats,&Logrotate{
+			Name: "logpack self log",
+			Rotate: 5,
+			Compress: true,
+			Files: []string{logfile},
+			Schedule: "0 0 6 * *",
+		})
+		defaultConf.Logrotates = logrotats
+		confs = append(confs,&defaultConf)
 	}
 
 
-	confs,err := wrapperConfs()
-
-	defaultConf := Conf{}
-	defaultConf.Name = "logpack log"
-	logrotats := []*Logrotate{}
-	logrotats = append(logrotats,&Logrotate{
-		Name: "logpack self log",
-		Rotate: 5,
-		Compress: true,
-		Files: []string{logfile},
-		Schedule: "0 0 6 * *",
-	})
-	defaultConf.Logrotates = logrotats
-	confs = append(confs,&defaultConf)
 	if err != nil || len(confs) ==0 {
 		fmt.Println("config load failed")
 		return
@@ -221,6 +267,7 @@ func main() {
 	if ! prepare() {
 		return
 	}
+
 
 	restartCron(confs)
 

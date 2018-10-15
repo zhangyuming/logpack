@@ -16,7 +16,7 @@ import (
 	"sync"
 	"archive/tar"
 	"os/exec"
-	)
+		)
 
 var compressRate int = 9
 var defaultRotateFileSize string = "1M"
@@ -361,9 +361,8 @@ func isUsedFile(file string) bool{
 		return true
 	}
 
-
-
 }
+
 
 func (c *Logrotate) Run() {
 	c.Lock()

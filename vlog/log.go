@@ -20,9 +20,9 @@ const(
 func SetLogOut(logfile string) (error) {
 
 	logf,err := os.OpenFile(logfile,os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-	log.Print("logging to file : ",logf)
+	log.Print("logging to file : ",logfile)
 	if err != nil{
-		Error("create log file error ", logf)
+		Error("create log file error ", logfile)
 		return err
 	}
 	log.SetOutput(logf)
@@ -31,6 +31,9 @@ func SetLogOut(logfile string) (error) {
 
 }
 
+func SetLogAppender(appender io.Writer){
+	log.SetOutput(appender)
+}
 
 func Info(v ...interface{})  {
 
