@@ -18,7 +18,7 @@ logpack 为服务器日志归档设计的， 服务器上经常有大量的日�
 > - 下载可执行文件[release]到终端服务器 
 > - 编写配置文件[/etc/logpack|~/etc/logpack] `配置文件必须为 yaml|yml  配置文件说明见下方` 
 > - 启动 `nohup ./logpack-[version] 1>nohup.out 2>&1 &`
-> - 默认日志文件夹：/var/log/logpack|~/logpack
+> - 默认日志文件夹: `/var/log/logpack` `~/logpack`
 >> 配置文件默认加载目录为 `/etc/logpack` `~/etc/logpack`  
 >> eg： /etc/logpack/logpack.yaml   `logpack.yaml`内容参加配置文件示例
 
