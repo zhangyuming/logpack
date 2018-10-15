@@ -201,7 +201,10 @@ func zipFile(name string) error{
 
 	for{
 		n,err := in.Read(buf)
-		if err != nil{
+		if err != nil && err == io.EOF{
+			vlog.Debug("文件读取结束",name)
+			break
+		}else {
 			vlog.Error("读取文件失败, filename: ", name,err)
 			break
 		}
