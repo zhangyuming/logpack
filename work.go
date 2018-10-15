@@ -201,18 +201,22 @@ func zipFile(name string) error{
 
 	for{
 		n,err := in.Read(buf)
-		if err != nil && err == io.EOF{
+		switch err {
+		case nil:
+			if n == 0{
+				vlog.Debug("文件读取结束",name)
+				goto loop
+			}
+			w.Write(buf[0:n])
+		case io.EOF:
 			vlog.Debug("文件读取结束",name)
-			break
-		}else {
+			goto loop
+		default:
 			vlog.Error("读取文件失败, filename: ", name,err)
-			break
+			goto loop
 		}
-		if n == 0{
-			break
-		}
-		w.Write(buf[0:n])
 	}
+	loop:
 	vlog.Debug("文件压缩结束",name)
 	//bt,err := ioutil.ReadAll(in)
 	//if err != nil{
