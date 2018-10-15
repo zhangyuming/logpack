@@ -13,6 +13,7 @@ import (
 	"os"
 	"log"
 	"os/exec"
+	"os/user"
 )
 
 var lcron = cron.New()
@@ -24,6 +25,7 @@ var conffileFlag string
 var validateConfFlag bool
 var CurrentDIR string
 var IsDebug bool
+var daemon bool
 func init() {
 
 	//加载配置文件， 默认加载路径 /etc/logpack、 当前用户工作空间 ~/etc/logpack 如果通过 -f 指定那么会只加载指定的配置文件，以上配置文件目录会被忽略
@@ -31,7 +33,8 @@ func init() {
 	flag.StringVar(&conffileFlag, "f", "", "指定唯一的配置文件。 如果指定 -f 那么-d将会忽略")
 	flag.IntVar(&compressRate,"rate", 9, "自定压缩比率")
 	flag.BoolVar(&validateConfFlag,"t",false,"校验配置文件")
-	flag.BoolVar(&IsDebug,"vv",false,"log level detail log")
+	flag.BoolVar(&IsDebug,"vv",false,"日志级别")
+	flag.BoolVar(&daemon,"daemon",false,"后台启动")
 	flag.Parse()
 	if IsDebug{
 		vlog.Level = "DEBUG"
@@ -68,6 +71,23 @@ func init() {
 			path: conffileFlag,
 		}
 		return
+	}
+
+
+	//后台启动
+	if daemon{
+		args := os.Args[1:]
+		i := 0
+		for ; i < len(args); i++ {
+			if args[i] == "-daemon" || args[i] == "-daemon=true" {
+				args[i] = "-daemon=false"
+				break
+			}
+		}
+		cmd := exec.Command(os.Args[0], args...)
+		cmd.Start()
+		fmt.Println("[PID]", cmd.Process.Pid)
+		os.Exit(0)
 	}
 
 }
@@ -144,12 +164,37 @@ func wrapperConfs() ([]*Conf,error) {
 func main() {
 
 
-	p,err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil{
-		log.Fatal("get current dir faile")
-		return
+	var logfile string
+	//创建日志文件
+	if err := os.Mkdir("/var/log/logpack",0755); err != nil{
+		u,err := user.Current()
+		if err != nil{
+			log.Fatalln("get user failed")
+			return
+		}
+		if err = os.Mkdir(filepath.Join(u.HomeDir,"logpack"),0755); err != nil{
+			log.Fatalln("create user home logpack dir fail")
+			return
+		}else{
+			logfile = filepath.Join(u.HomeDir,"logpack","logpack.log")
+			f,err := os.Create(logfile)
+			if err != nil{
+				log.Fatalln("create file error", err)
+				return
+			}
+			defer f.Close()
+			vlog.SetLogOut(logfile)
+		}
+	}else{
+		logfile = "/var/log/logpack/logpack.log"
+		f,err := os.Create(logfile)
+		if err != nil{
+			log.Fatalln("create file error", err)
+			return
+		}
+		defer f.Close()
+		vlog.SetLogOut(logfile)
 	}
-	logfile,err := vlog.SetLogOut(p)
 
 
 	confs,err := wrapperConfs()

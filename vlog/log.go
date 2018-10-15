@@ -4,7 +4,6 @@ import (
 	"log"
 	"io"
 	"os"
-	"path/filepath"
 )
 
 var Level string = "INFO"
@@ -18,17 +17,17 @@ const(
 )
 
 
-func SetLogOut(logdir string) (string,error) {
-	os.MkdirAll(filepath.Join(logdir,"logs"),0755)
-	logfile := filepath.Join(logdir,"logs","logpack.log")
+func SetLogOut(logfile string) (error) {
+
 	logf,err := os.OpenFile(logfile,os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-	log.Print("logging to file : ",logfile)
+	log.Print("logging to file : ",logf)
 	if err != nil{
-		Error("create log file error ", err)
-		return "", err
+		Error("create log file error ", logf)
+		return err
 	}
 	log.SetOutput(logf)
-	return logfile, nil
+
+	return nil
 
 }
 
